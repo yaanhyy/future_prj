@@ -27,6 +27,20 @@ fn my_fut_squared(i: u32) -> impl Future<Item = u32,  Error= Box<Error+ 'static>
     ok(i * i)
 }
 
+fn fn_plain(i: u32) -> u32 {
+    i - 50
+}
+
+fn fut_generic_own<A>(a1: A, a2: A) -> impl Future<Item = A, Error = Box<Error+ 'static>>
+    where
+        A: std::cmp::PartialOrd,
+{
+    if a1 < a2 {
+        ok(a1)
+    } else {
+        ok(a2)
+    }
+}
 
 
 fn main() {
@@ -49,7 +63,21 @@ fn main() {
     let retval2 = reactor.run(chained_future).unwrap();
     println!("{:?}", retval2);
 
+    let chained_future = my_fut().and_then(|retval| {
+        let retval2 = fn_plain(retval);
+        my_fut_squared(retval2)
+    });
+    let retval3 = reactor.run(chained_future).unwrap();
+    println!("{:?}", retval3);
 
+    let chained_future = my_fut().and_then(|retval| {
+        done(my_fn_squared(retval)).and_then(|retval2| my_fut_squared(retval2))
+    });
+    let retval3 = reactor.run(chained_future).unwrap();
+    println!("{:?}", retval3);
 
-    println!("Hello, world!");
+    let future = fut_generic_own("Sampdoria", "Juventus");
+    let retval = reactor.run(future).unwrap();
+    println!("fut_generic_own == {}", retval);
+
 }
