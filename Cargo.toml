@@ -1,0 +1,9 @@
+[package]
+name = "future_prj"
+version = "0.1.0"
+authors = ["hongyuanyang <hongyuanyang@huobi.com>"]
+edition = "2018"
+
+[dependencies]
+futures="*"
+tokio-core="*"
