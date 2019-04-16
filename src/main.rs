@@ -10,6 +10,9 @@ use tokio_core::reactor::Core;
 use std::error::{self,Error};
 use std::fmt;
 
+extern crate chrono;
+use chrono::prelude::*;
+use chrono::Duration;
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
 }
@@ -97,8 +100,76 @@ fn my_fut_ref_chained<'a>(s: &'a str) -> impl Future<Item = String, Error = Box<
     my_fut_ref(s).and_then(|s| ok(format!("received == {}", s)))
 }
 
+#[derive(Debug)]
+struct WaitForIt {
+    message: String,
+    until: DateTime<Utc>,
+    polls: u64,
+}
 
+impl WaitForIt {
+    pub fn new(message: String, delay: Duration) -> WaitForIt {
+        WaitForIt {
+            polls: 0,
+            message: message,
+            until: Utc::now() + delay,
+        }
+    }
+}
+
+impl Future for WaitForIt {
+    type Item = String;
+    type Error = Box<Error>;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        let now = Utc::now();
+        if self.until < now {
+            Ok(Async::Ready(
+                format!("{} after {} polls!", self.message, self.polls),
+            ))
+        } else {
+            self.polls += 1;
+
+            println!("not ready yet --> {:?}", self);
+            if self.message.eq(&String::from("I'm done:")) {
+                futures::task::current().notify();
+            }
+            Ok(Async::NotReady)
+        }
+    }
+}
+
+
+
+use futures::future::join_all;
 fn main() {
+
+    let mut reactor = Core::new().unwrap();
+
+    let wfi_1 = WaitForIt::new("I'm done:".to_owned(), Duration::seconds(1));
+    println!("wfi_1 == {:?}", wfi_1);
+    //let ret = reactor.run(wfi_1).unwrap();
+    //println!("ret == {:?}", ret);
+
+    let wfi_2 = WaitForIt::new("I'm done too:".to_owned(), Duration::seconds(1));
+    println!("wfi_2 == {:?}", wfi_2);
+
+    //select_all
+   //let v = vec![wfi_1, wfi_2];
+   // let sel = futures::future::select_all(v);
+
+    //select2
+    let sel = wfi_1.select2(wfi_2);
+
+    //join_all
+    //let sel = join_all(v);
+
+    let ret = reactor.run(sel).unwrap();
+    println!("ret == {:?}", ret);
+
+
+
+
     let retval = my_fn().unwrap();
     println!("{:?}", retval);
 
