@@ -197,10 +197,83 @@ impl Future for WaitInAnotherThread {
 }
 
 use futures::future::join_all;
-fn main() {
 
+
+struct MyStream {
+    current: u32,
+    max: u32,
+}
+
+impl MyStream {
+    pub fn new(max: u32) -> MyStream {
+        MyStream {
+            current: 0,
+            max: max,
+        }
+    }
+}
+
+impl Stream for MyStream {
+    type Item = u32;
+    type Error = Box<Error>;
+
+//    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+//        match self.current {
+//            ref mut x if *x < self.max => {
+//                *x = *x + 1;
+//
+//                Ok(Async::Ready(Some(*x)))
+//            }
+//            _ => Ok(Async::Ready(None)),
+//        }
+//    }
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        use futures::future::Executor;
+
+        match self.current {
+            ref mut x if *x < self.max => {
+                *x = *x + 1;
+
+//                self.core_handle.execute(WaitInAnotherThread::new(
+//                    Duration::seconds(2)
+//
+//                ));
+                Ok(Async::Ready(Some(*x)))
+            }
+            _ => Ok(Async::Ready(None)),
+        }
+    }
+}
+use tokio::fs;
+fn main() {
+    let future = fs::read_dir(".")
+        .map_err(|e| eprintln!("Error reading directory: {}", e))
+        .and_then(|readdir| {
+            readdir
+                .map_err(|e| eprintln!("Error reading directory: {}", e))
+                .for_each(|entry| {
+                    println!("{:?}", entry.path());
+                    futures::future::ok(())
+                })
+        })
+        ;
+    tokio::run(future);
+    //stream
     let mut reactor = Core::new().unwrap();
 
+    let my_stream = MyStream::new(5);
+
+    let fut = my_stream.for_each(|num| {
+        println!("num === {}", num);
+        ok(())
+    });
+
+    // let's run the future
+    let ret = reactor.run(fut).unwrap();
+    println!("ret == {:?}", ret);
+
+    //future chain
     let wiat = WaitInAnotherThread::new(Duration::seconds(3));
     println!("wait future started");
     let ret = reactor.run(wiat).unwrap();
