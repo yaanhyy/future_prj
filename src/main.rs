@@ -142,14 +142,16 @@ impl Future for WaitForIt {
 use std::thread;
 pub struct WaitInAnotherThread {
     end_time: DateTime<Utc>,
+    msg : String,
     running: bool,
 }
 
 impl WaitInAnotherThread {
     pub fn
-    new(how_long: Duration) -> WaitInAnotherThread {
+    new(how_long: Duration, msg :String) -> WaitInAnotherThread {
         WaitInAnotherThread {
             end_time: Utc::now() + how_long,
+            msg : msg,
             running: false,
         }
     }
@@ -174,7 +176,7 @@ use futures::task;
 
 impl Future for WaitInAnotherThread {
     type Item = ();
-    type Error = Box<Error>;
+    type Error = ();
 
 
 
@@ -202,13 +204,15 @@ use futures::future::join_all;
 struct MyStream {
     current: u32,
     max: u32,
+    core_handle : tokio_core::reactor::Handle,
 }
 
 impl MyStream {
-    pub fn new(max: u32) -> MyStream {
+    pub fn new(max: u32, handle: tokio_core::reactor::Handle) -> MyStream {
         MyStream {
             current: 0,
             max: max,
+            core_handle : handle,
         }
     }
 }
@@ -234,11 +238,10 @@ impl Stream for MyStream {
         match self.current {
             ref mut x if *x < self.max => {
                 *x = *x + 1;
-
-//                self.core_handle.execute(WaitInAnotherThread::new(
-//                    Duration::seconds(2)
-//
-//                ));
+                self.core_handle.execute(WaitInAnotherThread::new(
+                    Duration::seconds(2),
+                    format!("WAIT {:?}", x),
+                ));
                 Ok(Async::Ready(Some(*x)))
             }
             _ => Ok(Async::Ready(None)),
@@ -247,7 +250,23 @@ impl Stream for MyStream {
 }
 use tokio::fs;
 use std::env::args;
+
+use tokio::net::TcpStream;
+use tokio::prelude::*;
+use std::net::ToSocketAddrs;
 fn main() {
+    let mut addr_iter = "httpbin.org:80".to_socket_addrs().unwrap();
+    let addr = match addr_iter.next() {
+        None => panic!("DNS resolution failed"),
+        Some(addr) => addr,
+    };
+    let future = TcpStream::connect(&addr)
+        .map_err(|e| eprintln!("Error connecting: {:?}", e))
+        .map(|stream| {
+            println!("Got a stream: {:?}", stream);
+        });
+    tokio::run(future);
+
     let future = fs::read_dir(".")
         .map_err(|e| eprintln!("Error reading directory: {}", e))
         .and_then(|readdir| {
@@ -316,22 +335,41 @@ fn main() {
 //    tokio::run(future);
     //stream
     let mut reactor = Core::new().unwrap();
+    let my_stream = MyStream::new(5, reactor.handle());
 
-    let my_stream = MyStream::new(5);
-
+    // we use for_each to consume
+    // the stream
     let fut = my_stream.for_each(|num| {
-        println!("num === {}", num);
+        println!("num === {:?}", num);
         ok(())
     });
 
+    // this is a manual future. it's the same as the
+    // future spawned into our stream
+    let wait = WaitInAnotherThread::new(Duration::seconds(3), "Manual3".to_owned());
+
+    // we join the futures to let them run concurrently
+    let future_joined = fut.map_err(|err| {}).join(wait);
+
     // let's run the future
-    let ret = reactor.run(fut).unwrap();
-    println!("ret == {:?}", ret);
+    let ret = reactor.run(future_joined).unwrap();
+    println!("stream ret == {:?}", ret);
+
+//    let my_stream = MyStream::new(5);
+//
+//    let fut = my_stream.for_each(|num| {
+//        println!("num === {}", num);
+//        ok(())
+//    });
+
+    // let's run the future
+//    let ret = reactor.run(fut).unwrap();
+//    println!("ret == {:?}", ret);
 
     //future chain
-    let wiat = WaitInAnotherThread::new(Duration::seconds(3));
+    let wait = WaitInAnotherThread::new(Duration::seconds(3), String::from("chain"));
     println!("wait future started");
-    let ret = reactor.run(wiat).unwrap();
+    let ret = reactor.run(wait).unwrap();
     println!("wait future completed. ret == {:?}", ret);
 
     let wfi_1 = WaitForIt::new("I'm done:".to_owned(), Duration::seconds(1));
