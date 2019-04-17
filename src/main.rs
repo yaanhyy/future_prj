@@ -9,7 +9,7 @@ use futures::future::{err, ok};
 use tokio_core::reactor::Core;
 use std::error::{self,Error};
 use std::fmt;
-
+use tokio::prelude::*;
 extern crate chrono;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -246,6 +246,7 @@ impl Stream for MyStream {
     }
 }
 use tokio::fs;
+use std::env::args;
 fn main() {
     let future = fs::read_dir(".")
         .map_err(|e| eprintln!("Error reading directory: {}", e))
@@ -259,6 +260,60 @@ fn main() {
         })
         ;
     tokio::run(future);
+
+
+//    let future = fs::read_dir(".")
+//        .flatten_stream()
+//        .for_each(|entry| {
+//            println!("{:?}", entry.path());
+//            futures::future::ok(())
+//        })
+//        .map_err(|e| eprintln!("Error reading directory: {}", e))
+//        ;
+//    let args_vec: Vec<String> = args().skip(1).collect();
+//    let future =
+//        stream::iter_ok(args_vec).for_each(|dir| {
+//            let read_future = fs::read_dir(dir)
+//                .flatten_stream().map_err(|e| eprintln!("Error reading directory: {}", e))
+//                .for_each(|entry| {
+//                    println!("{:?}", entry.path());
+//                    futures::future::ok(())
+//                });
+//            tokio::spawn(read_future)
+//        })
+//        ;
+//    tokio::run(future);
+
+    let future = futures::future::ok(()).and_then(|_| {
+        for dir in args().skip(1) {
+            let future = fs::read_dir(dir)
+                .flatten_stream()
+                .map_err(|e| eprintln!("Error reading directory: {}", e))
+                .for_each(|entry| {
+                    println!("{:?}", entry.path());
+                    futures::future::ok(())
+                })
+                ;
+            tokio::spawn(future);
+        }
+        futures::future::ok(())
+    });
+    tokio::run(future);
+//    let future = future::poll_fn(|| {
+//        for dir in args().skip(1) {
+//            let future = fs::read_dir(dir)
+//                .flatten_stream()
+//                .map_err(|e| eprintln!("Error reading directory: {}", e))
+//                .for_each(|entry| {
+//                    println!("{:?}", entry.path());
+//                    future::ok(())
+//                })
+//                ;
+//            tokio::spawn(future);
+//        }
+//        Ok(Async::Ready(()))
+//    });
+//    tokio::run(future);
     //stream
     let mut reactor = Core::new().unwrap();
 
