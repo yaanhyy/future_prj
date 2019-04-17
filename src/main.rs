@@ -158,7 +158,7 @@ impl WaitInAnotherThread {
 
     fn run(&mut self, task: task::Task) {
         let lend = self.end_time;
-
+        println!("msg: {:?}!", self.msg);
         thread::spawn(move || {
             while Utc::now() < lend {
                 let delta_sec = lend.timestamp() - Utc::now().timestamp();
@@ -167,7 +167,7 @@ impl WaitInAnotherThread {
                 }
                 task.notify();
             }
-            println!("the time has come == {:?}!", lend);
+
         });
     }
 }
