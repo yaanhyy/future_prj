@@ -2,7 +2,8 @@
 
 //extern crate futures_await as futures;
 //extern crate tokio_core;
-
+#[macro_use]
+extern crate futures;
 use futures::done;
 use futures::prelude::*;
 use futures::future::{err, ok};
@@ -19,6 +20,8 @@ mod tcp_stream;
 mod echo;
 mod tcp_test;
 mod tcp_server;
+mod async_future;
+
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
