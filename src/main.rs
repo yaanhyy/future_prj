@@ -18,6 +18,7 @@ mod spawn;
 mod tcp_stream;
 mod echo;
 mod tcp_test;
+mod tcp_server;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
