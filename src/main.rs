@@ -21,7 +21,8 @@ mod echo;
 mod tcp_test;
 mod tcp_server;
 mod async_future;
-
+mod stream_sync;
+mod stream_async;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
