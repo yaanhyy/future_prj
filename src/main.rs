@@ -5,7 +5,7 @@
 #[macro_use]
 extern crate futures;
 use futures::done;
-use futures::prelude::*;
+use futures::future;
 use futures::future::{err, ok};
 use tokio_core::reactor::Core;
 use std::error::{self,Error};
