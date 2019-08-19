@@ -23,6 +23,7 @@ mod tcp_server;
 mod async_future;
 mod stream_sync;
 mod stream_async;
+mod backend;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
