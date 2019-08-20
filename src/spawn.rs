@@ -59,6 +59,16 @@ fn no_lazy_impl() {
     let fut = future::poll_fn(||{println!("fut print"); Ok(Async::Ready(()))});
     tokio::run(fut);
 
+    //let mut acc=Box::new(1);
+    tokio::run(
+        stream::iter_ok(0..10).fold(0, |tx, i| {
+            println!("fold: {}", tx);
+            future::ok(tx + i)
+
+        }).map(|res| println!("fold acc: {}", res))
+            //.map(|_| ()) // Drop tx handle
+    );
+
     let fut = lazy(||
         {
             println!("fut lazy print");

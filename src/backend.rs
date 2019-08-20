@@ -2,7 +2,7 @@ use tokio::io;
 use tokio::net::TcpListener;
 use tokio::timer::Interval;
 use futures::{future, stream, Future, Stream, Sink};
-use futures::future::lazy;
+use futures::future::{lazy};
 use futures::sync::{mpsc, oneshot};
 use std::time::{Duration,Instant};
 
@@ -102,6 +102,45 @@ fn backend() {
 }
 
 type Message = oneshot::Sender<Duration>;
+use futures::Poll;
+use futures::Async;
+use rand;
+use rand::Rng;
+// My code
+struct Pong {
+    start: Instant,
+    wait_secs: u64,
+}
+
+impl Pong {
+    fn new(wait_max_secs: u64) -> Pong {
+        let mut rng = rand::thread_rng();
+        let wait_secs = rng.gen_range(0, wait_max_secs);
+
+        Pong {
+            start: Instant::now(),
+            wait_secs
+        }
+    }
+}
+
+
+
+impl Future for Pong {
+    type Item = ();
+    type Error = io::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        if self.start.elapsed().as_secs() > self.wait_secs {
+            println!("pong received");
+            Ok(Async::Ready(()))
+        } else {
+            println!("waiting for pong...");
+            Ok(Async::NotReady)
+        }
+    }
+}
+
 
 struct Transport;
 
@@ -112,6 +151,8 @@ impl Transport {
 
     fn recv_pong(&self) -> impl Future<Item = (), Error = io::Error> {
         // ...
+        println!("entering recv_pong");
+        Pong::new(2)
     }
 }
 
