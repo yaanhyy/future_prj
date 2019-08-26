@@ -1,7 +1,7 @@
 use tokio::net::{TcpStream, tcp::ConnectFuture};
 use futures::{Future, Async, Poll};
 use std::time::Duration;
-use std::thread::{sleep, spawn};
+use std::thread::{sleep};
 use tokio::io::AsyncWrite;
 use bytes::{Bytes, Buf};
 use std::io::{self, Cursor};

@@ -5,7 +5,7 @@ use futures::{future, stream, Future, Stream, Sink};
 use futures::future::{lazy};
 use futures::sync::{mpsc, oneshot};
 use std::time::{Duration,Instant};
-
+use std::thread::{sleep, spawn};
 
 // 定义后台任务。`rx` 参数是通道的接收句柄。
 // 任务将从通道中拉取 `usize` 值（代表套接字读取都字节数）并求总和。
@@ -116,11 +116,14 @@ impl Pong {
     fn new(wait_max_secs: u64) -> Pong {
         let mut rng = rand::thread_rng();
         let wait_secs = rng.gen_range(0, wait_max_secs);
-
-        Pong {
+        println!("wait_secs:{}",wait_secs);
+        let pong = Pong {
             start: Instant::now(),
             wait_secs
-        }
+        };
+        let duration = Duration::from_millis(1000);
+        sleep(duration);
+        pong
     }
 }
 
@@ -146,13 +149,13 @@ struct Transport;
 
 impl Transport {
     fn send_ping(&self) {
-        // ...
+
     }
 
     fn recv_pong(&self) -> impl Future<Item = (), Error = io::Error> {
         // ...
         println!("entering recv_pong");
-        Pong::new(2)
+        Pong::new(1)
     }
 }
 
@@ -167,7 +170,7 @@ fn coordinator_task(rx: mpsc::Receiver<Message>)
         transport.send_ping();
 
         transport.recv_pong()
-            .map_err(|_| ())
+            .map_err(|e|  println!("recv_pong err = {:?}", e))
             .and_then(move |_| {
                 let rtt = start.elapsed();
                 pong_tx.send(rtt).unwrap();
