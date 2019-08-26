@@ -121,7 +121,10 @@ impl Pong {
             start: Instant::now(),
             wait_secs
         };
-        let duration = Duration::from_millis(1000);
+
+        let sleep_secs = rng.gen_range(wait_max_secs+1, wait_max_secs+5);
+        println!("sleep_secs:{}", sleep_secs);
+        let duration = Duration::from_millis(sleep_secs*1000);
         sleep(duration);
         pong
     }
@@ -155,7 +158,7 @@ impl Transport {
     fn recv_pong(&self) -> impl Future<Item = (), Error = io::Error> {
         // ...
         println!("entering recv_pong");
-        Pong::new(1)
+        Pong::new(3)
     }
 }
 
