@@ -2,6 +2,7 @@
 
 //extern crate futures_await as futures;
 //extern crate tokio_core;
+#![feature(async_await)]
 #[macro_use]
 extern crate futures;
 use futures::done;
@@ -24,6 +25,8 @@ mod async_future;
 mod stream_sync;
 mod stream_async;
 mod backend;
+mod http_server;
+mod simple_future;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
