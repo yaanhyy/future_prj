@@ -27,6 +27,7 @@ mod stream_async;
 mod backend;
 mod http_server;
 mod simple_future;
+mod waker_future;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
