@@ -1,7 +1,9 @@
 use futures_preview::{task::Context, task::Poll};
 use futures_timer::Delay;
-use futures_preview::Stream;
+use futures_preview::{Stream,TryStream};
 use std::{pin::Pin, time::{Duration, Instant}};
+use futures_preview::{prelude::*, future::{self, Either}};
+use futures::Stream as _ ;
 
 /// Information about a slot.
 pub struct SlotInfo {
@@ -24,7 +26,7 @@ pub struct Slots {
 pub enum Error {
     ReadFail,
 }
-
+use std::time::{SystemTime, UNIX_EPOCH};
 impl Stream for Slots {
     type Item = Result<SlotInfo, Error>;
 
@@ -35,7 +37,7 @@ impl Stream for Slots {
             if let Some(ref mut inner_delay) = self.inner_delay {
                 match Future::poll(Pin::new(inner_delay), cx) {
                     Poll::Pending => return Poll::Pending,
-                    Poll::Ready(Err(err)) => return Poll::Ready(Some(Err(Error::FaultyTimer(err)))),
+                    Poll::Ready(Err(err)) => return Poll::Ready(Some(Err(Error::ReadFail))),
                     Poll::Ready(Ok(())) => {}
                 }
             }
@@ -46,7 +48,9 @@ impl Stream for Slots {
             let ends_in = Duration::from_millis(1000);
             let ends_at = Instant::now() + ends_in;
             self.inner_delay = Some(Delay::new(ends_in));
-
+            let slot_num = 10;
+            let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            println!("stamp:{}",timestamp);
             // never yield the same slot twice.
             if slot_num > self.last_slot {
                 self.last_slot = slot_num;
@@ -62,38 +66,35 @@ impl Stream for Slots {
     }
 }
 
-pub fn start_slot() {
-    Slots::new(
-        slot_duration.slot_duration(),
-        inherent_data_providers,
-        timestamp_extractor,
-    ).inspect_err(|e| debug!(target: "slots", "Faulty timer: {:?}", e))
-        .try_for_each(move |slot_info| {
-            // only propose when we are not syncing.
-            if sync_oracle.is_major_syncing() {
-                debug!(target: "slots", "Skipping proposal slot due to sync.");
-                return Either::Right(future::ready(Ok(())));
-            }
-
-            let slot_num = slot_info.number;
-            let chain_head = match client.best_chain() {
-                Ok(x) => x,
-                Err(e) => {
-                    warn!(target: "slots", "Unable to author block in slot {}. \
-					no best block header: {:?}", slot_num, e);
-                    return Either::Right(future::ready(Ok(())));
-                }
-            };
-
-            Either::Left(worker.on_slot(chain_head, slot_info).map_err(
-                |e| {
-                    warn!(target: "slots", "Encountered consensus error: {:?}", e);
-                }).or_else(|_| future::ready(Ok(())))
-            )
-        }).then(|res| {
-        if let Err(err) = res {
-            warn!(target: "slots", "Slots stream terminated with an error: {:?}", err);
+impl Slots {
+    /// Create a new `Slots` stream.
+    pub fn new(
+        slot_duration: u64,
+    ) -> Self {
+        Slots {
+            last_slot: 0,
+            slot_duration,
+            inner_delay: None,
         }
+    }
+}
+
+pub fn start_slot() -> impl Future<Output = ()> {
+    Slots::new(
+        16
+    ).inspect_err(|e| ())
+        .try_for_each(move |slot_info| {
+            future::ready(Ok(()))
+        }).then(|res| {
+
         future::ready(())
     })
+}
+
+#[test]
+fn slot_test() {
+    let babe = start_slot();
+    let babe = babe.map(|()| Ok::<(), ()>(())).compat();
+
+    tokio::spawn(babe);
 }
