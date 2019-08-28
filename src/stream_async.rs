@@ -85,7 +85,7 @@ impl Stream for Fibonacci {
 
 
 fn stream_async() {
-    let fib = Fibonacci::new(Duration::from_secs(1));
+    let fib = Fibonacci::new(Duration::from_secs(5));
     let display = Display10::new(fib);
 
     tokio::run(display);
