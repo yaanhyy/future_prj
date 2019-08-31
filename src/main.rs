@@ -29,6 +29,7 @@ mod http_server;
 mod simple_future;
 mod waker_future;
 mod stream_future03;
+mod combinator;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
