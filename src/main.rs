@@ -31,6 +31,8 @@ mod waker_future;
 mod stream_future03;
 mod combinator;
 mod chat;
+mod mpsc_test;
+mod interval;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)

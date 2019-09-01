@@ -66,13 +66,13 @@ impl Stream for Fibonacci {
 
     fn poll(&mut self) -> Poll<Option<u64>, ()> {
         // 等待下一个间隔
-        try_ready!(
+        let vue = try_ready!(
             self.interval.poll()
                 // 如果 Tokio 运行时不可用，interval 可能会拉取失败
                 // 在本例中，错误不做处理
                 .map_err(|_| ())
         );
-
+        println!("vue:{:?}", vue);
         let curr = self.curr;
         let next = curr + self.next;
 
