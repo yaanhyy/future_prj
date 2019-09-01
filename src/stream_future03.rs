@@ -33,6 +33,7 @@ impl Stream for Slots {
     type Item = Result<SlotInfo, Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        println!("in poll_next");
         let mut slot_num = 10;
         loop {
             let slot_duration = self.slot_duration;
