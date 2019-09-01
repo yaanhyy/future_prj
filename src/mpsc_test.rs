@@ -20,15 +20,16 @@ impl Stream for Task {
     type Item = u128;
     type Error = ();
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-
+        let mut index:u128 = 0;
         loop {
-            let res = self.interval.poll().map_err(|_| ());
+            let res = self.interval.poll();
             if res.is_ok() {
                 println!("ins:{:?}",res);
                 if let Ok(Async::Ready(t)) = res {
                     let ins: Instant = t.unwrap();
                     let ins = ins.elapsed().as_millis();
                     println!("send:{}",ins);
+                    index = ins;
                     self.tx.unbounded_send(ins );
                     break;
                 } else {
@@ -37,7 +38,7 @@ impl Stream for Task {
             }
 
         }
-        Ok(Async::NotReady)
+        Ok(Async::Ready(Some(index)))
     }
 }
 
@@ -58,7 +59,8 @@ impl  Stream for Front {
                 self.index = t.unwrap();
                 return Ok(Async::Ready(Some(self.index)))
             } else {
-                self.stream.poll();
+                let res = self.stream.poll();
+                println!("back_poll:{:?}", res);
                 return Ok(Async::NotReady)
             }
         } else {
@@ -70,7 +72,7 @@ impl  Stream for Front {
 
 fn start_task() {
     let (tx, rx ) = mpsc::unbounded();
-    let duration = Duration::from_secs(3);
+    let duration = Duration::from_secs(5);
     let task = Task{tx, interval: Interval::new(Instant::now(), duration)};
     let front = Front{rx: rx, index: 0, stream: task};
 //    let task_fut = task.for_each(|index| {
