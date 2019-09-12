@@ -112,9 +112,19 @@ impl Stream for TcpListenStream {
                     continue
                 }
             };
-            let mut rd =  BytesMut::new();
-            let res = sock.read_buf(&mut rd);
-            println!("sock:{}, buf:{:?}", sock_addr, rd)
+            //let mut rd =  BytesMut::new();
+            //let res = sock.read_buf(&mut rd);
+            let (reader, writer) = sock.split();
+            tokio::spawn(write_all(writer, b"Welcome to the echo server\r\n")
+                .and_then(|(writer, _)| {
+                    copy(reader, writer)
+                        .map(|_| println!("Connection closed"))
+                }).map_err(|e| eprintln!("Error occured: {:?}", e))
+                //futures::future::ok(())
+                );
+            println!("sock:{}, buf", sock_addr);
+            self.pending.push_back(sock_addr.to_string());
+
 
         }
     }
@@ -152,6 +162,7 @@ fn tcp_listen_on() {
             match con.poll().expect("Error while polling swarm") {
                 Async::Ready(Some(e)) => println!("{:?}", e),
                 Async::Ready(None) | Async::NotReady => {
+                    println!("con poll not ready");
                     return Ok(Async::NotReady)
                 }
             }
