@@ -88,7 +88,7 @@ fn async_chain() {
     let hello_world = HelloWorld::Connecting(connect_future);
 
     // 运行之
-    tokio::run(hello_world.map_err(|e| println!("{0}", e)))
+    tokio::run(hello_world.map_err(|e| println!("{:?}", e)))
 }
 
 #[test]
