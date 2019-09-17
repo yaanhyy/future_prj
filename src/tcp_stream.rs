@@ -39,7 +39,13 @@ fn tcp_read() {
         })
         .and_then(|(stream, buf)| {
             // Then, we use write_all to write the entire buffer back:
-            tokio::io::write_all(stream, b"Welcome to the echo client\r\n");
+            println!("read:{:?}",buf);
+            tokio::spawn(tokio::io::write_all(stream, b"Welcome to the echo client\r\n")
+                .and_then(move|(writer, buf)| {
+
+                future::ok(())
+                //reader.
+            }).map_err(|e| eprintln!("Error occured: {:?}", e)));
             futures::future::ok(())
         }).map_err(|err| {
         // All tasks must have an `Error` type of `()`. This forces error
