@@ -116,9 +116,9 @@ impl Stream for TcpListenStream {
             //let res = sock.read_buf(&mut rd);
             let (reader, writer) = sock.split();
             tokio::spawn(write_all(writer, b"Welcome to the echo server\r\n")
-                .and_then(|(writer, _)| {
-                    copy(reader, writer)
-                        .map(|_| println!("Connection closed"))
+                .and_then(move|(writer, buf)| {
+                    copy(reader, writer).map(|_| println!("Connection closed"))
+                    //reader.
                 }).map_err(|e| eprintln!("Error occured: {:?}", e))
                 //futures::future::ok(())
                 );
@@ -161,7 +161,7 @@ fn tcp_listen_on() {
         println!("enter loop");
         loop {
             match con.poll().expect("Error while polling swarm") {
-                Async::Ready(Some(e)) => println!("{:?}", e),
+                Async::Ready(Some(e)) => println!("resp:{:?}", e),
                 Async::Ready(None) | Async::NotReady => {
                     println!("con poll not ready");
                     return Ok(Async::NotReady)
