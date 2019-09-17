@@ -158,6 +158,7 @@ fn tcp_listen_on() {
     let mut con = stream.unwrap();
 
     tokio::run(future::poll_fn(move || -> Result<_, ()> {
+        println!("enter loop");
         loop {
             match con.poll().expect("Error while polling swarm") {
                 Async::Ready(Some(e)) => println!("{:?}", e),
