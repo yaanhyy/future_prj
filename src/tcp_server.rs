@@ -75,8 +75,36 @@ impl Stream for Listener
     }
 }
 
+struct Colletion  {
+    inner: Manager,
+}
+
+impl Colletion {
+    fn new(manager: Manager) -> Self {
+        Colletion{inner: manager}
+    }
+
+    fn poll(self) -> Async<u32>{
+        self.inner.poll()
+    }
+}
+
+struct Manager {}
+
+impl Manager {
+    fn new() -> Self {
+        Self{}
+    }
+
+    fn poll(self) -> Async<u32> {
+        let executor = tokio_executor::DefaultExecutor::current();
+        executor.execute(futures::future::ok(3).and_then(|data|{println!("execute:{}", data); futures::future::ok(())}));
+        Async::Ready(0)
+    }
+}
+
 /// Stream that listens on an TCP/IP address.
-#[derive(Debug)]
+///#[derive(Debug)]
 pub struct TcpListenStream {
     /// Stream of incoming sockets.
     inner: Listener,
@@ -84,6 +112,7 @@ pub struct TcpListenStream {
     port: u16,
     /// Temporary buffer of listener events.
     pending: VecDeque<String>,
+    colletion: Colletion,
 
 }
 
@@ -93,6 +122,7 @@ impl Stream for TcpListenStream {
 
     fn poll(&mut self) -> Poll<Option<String>, io::Error> {
         loop {
+            (self).colletion.poll();
             if let Some(event) = self.pending.pop_front() {
                 return Ok(Async::Ready(Some(event)))
             }
@@ -117,10 +147,11 @@ impl Stream for TcpListenStream {
             let (reader, writer) = sock.split();
             tokio::spawn(write_all(writer, b"Welcome to the echo server\r\n")
                 .and_then(move|(writer, buf)| {
-                    copy(reader, writer).map(|_| println!("Connection closed"))
+                    //copy(reader, writer).map(|_| println!("Connection closed"))
                     //reader.
+                    futures::future::ok(())
                 }).map_err(|e| eprintln!("Error occured: {:?}", e))
-                //futures::future::ok(())
+ //
                 );
             println!("sock:{}, buf", sock_addr);
             self.pending.push_back(sock_addr.to_string());
@@ -147,6 +178,7 @@ impl TcpCon {
             inner: Listener::new(listener.incoming(), Duration::new(2,0)),
             port,
             pending: VecDeque::new(),
+            colletion: Colletion::new(Manager::new())
         };
 
         Ok(stream)
