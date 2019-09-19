@@ -13,7 +13,7 @@ use std::{
     vec::IntoIter
 };
 use bytes::{BufMut, Bytes, BytesMut};
-
+use futures::{future::Executor};
 
 fn tcp_server() {
     let addr = "127.0.0.1:3000".parse().expect("couldn't parse address");
@@ -157,7 +157,9 @@ fn tcp_listen_on() {
     let stream = TcpCon::listen_on("127.0.0.1:8765");
     let mut con = stream.unwrap();
 
-    tokio::run(future::poll_fn(move || -> Result<_, ()> {
+    let executor = tokio_executor::DefaultExecutor::current();
+    //tokio::run(future::poll_fn(move || -> Result<_, ()> {
+    let res = executor.execute(future::poll_fn(move || -> Result<_, ()> {
         println!("enter loop");
         loop {
             match con.poll().expect("Error while polling swarm") {
@@ -169,6 +171,7 @@ fn tcp_listen_on() {
             }
         }
     }));
+    println!("{:?}", res);
 }
 
 #[test]

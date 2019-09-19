@@ -270,6 +270,11 @@ impl Stream for MyStream {
         }
     }
 }
+
+use std::cell::RefCell;
+
+thread_local!(static NOTIFY: RefCell<bool> = RefCell::new(true));
+
 use tokio::fs;
 use std::env::args;
 
