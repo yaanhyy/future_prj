@@ -75,19 +75,6 @@ impl Stream for Listener
     }
 }
 
-struct Colletion  {
-    inner: Manager,
-}
-
-impl Colletion {
-    fn new(manager: Manager) -> Self {
-        Colletion{inner: manager}
-    }
-
-    fn poll(self) -> Async<u32>{
-        self.inner.poll()
-    }
-}
 
 struct Manager {}
 
@@ -96,12 +83,28 @@ impl Manager {
         Self{}
     }
 
-    fn poll(self) -> Async<u32> {
+    fn poll(&mut self) -> Async<u32> {
         let executor = tokio_executor::DefaultExecutor::current();
         executor.execute(futures::future::ok(3).and_then(|data|{println!("execute:{}", data); futures::future::ok(())}));
         Async::Ready(0)
     }
 }
+
+struct Colletion  {
+    inner: Manager
+}
+
+impl Colletion {
+    fn new(manager: Manager) -> Self {
+        Colletion{inner: manager}
+    }
+
+    fn poll(&mut self) -> Async<u32>{
+        self.inner.poll()
+    }
+}
+
+
 
 /// Stream that listens on an TCP/IP address.
 ///#[derive(Debug)]
@@ -189,9 +192,9 @@ fn tcp_listen_on() {
     let stream = TcpCon::listen_on("127.0.0.1:8765");
     let mut con = stream.unwrap();
 
-    let executor = tokio_executor::DefaultExecutor::current();
-    //tokio::run(future::poll_fn(move || -> Result<_, ()> {
-    let res = executor.execute(future::poll_fn(move || -> Result<_, ()> {
+    //let executor = tokio_executor::DefaultExecutor::current();
+    tokio::run(future::poll_fn(move || -> Result<_, ()> {
+    //let res = executor.execute(future::poll_fn(move || -> Result<_, ()> {
         println!("enter loop");
         loop {
             match con.poll().expect("Error while polling swarm") {
@@ -203,7 +206,7 @@ fn tcp_listen_on() {
             }
         }
     }));
-    println!("{:?}", res);
+    //println!("execute:{:?}", res);
 }
 
 #[test]
