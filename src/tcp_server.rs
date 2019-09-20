@@ -214,6 +214,7 @@ fn tcp_server_test() {
     tcp_server();
 }
 
+//nc 127.0.0.1 8765 or in mac nc -p 4567 127.0.0.1 8765
 #[test]
 fn tcp_listen_test() {
     tcp_listen_on();
