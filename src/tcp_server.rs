@@ -76,16 +76,43 @@ impl Stream for Listener
 }
 
 
-struct Manager {}
+struct Manager {
+    tasks_handle: Vec<Box<dyn Future<Item = (), Error = ()> + Send>>,
+}
 
 impl Manager {
     fn new() -> Self {
-        Self{}
+        Self{tasks_handle: Vec::new()}
+    }
+
+    fn add_task(&mut self) -> (){
+        let addr = "127.0.0.1:0".parse().expect("couldn't parse address");
+        let listener = TcpListener::bind(&addr).expect("couldn't bind address");
+        let local = listener.local_addr();
+        println!("local addr:{:?}", local );
+        let fut = Box::new(listener
+            .incoming()
+            .for_each(|socket| {
+                let (reader, writer) = socket.split();
+                write_all(writer, b"Welcome to the echo server\r\n")
+                    .and_then(|(writer, _)| {
+                        copy(reader, writer)
+                            .map(|_| println!("Connection closed"))
+                    })
+            }).map_err(|e| eprintln!("An error occurred: {:?}", e)));
+    //    let fut = Box::new(futures::future::ok(3).and_then(|data|{println!("execute:{}", data); futures::future::ok::<(),()>(())}));
+        self.tasks_handle.push(fut);
     }
 
     fn poll(&mut self) -> Async<u32> {
         let executor = tokio_executor::DefaultExecutor::current();
-        executor.execute(futures::future::ok(3).and_then(|data|{println!("execute:{}", data); futures::future::ok(())}));
+//        let iter = self.tasks_handle.into_iter();
+//        //let fut = futures::future::ok(3).and_then(|data|{println!("execute:{}", data); futures::future::ok(())});
+//        iter.for_each( move |fut| executor.execute(Box::into_raw(fut)));
+//        self.tasks_handle.clear();
+        for to_spawn in self.tasks_handle.drain(..) {
+            executor.execute(to_spawn);
+        }
         Async::Ready(0)
     }
 }
@@ -138,6 +165,7 @@ impl Stream for TcpListenStream {
                 _ => return Ok(Async::NotReady)
             };
             println!("get sock");
+            self.colletion.inner.add_task();
             let sock_addr = match sock.peer_addr() {
                 Ok(addr) => addr,
                 Err(err) => {
