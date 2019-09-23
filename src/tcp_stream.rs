@@ -34,16 +34,19 @@ fn tcp_read() {
             // We're going to read the first 32 bytes the server sends us
             // and then just echo them back:
             let mut buf = vec![0; 2];
+            //let (reader,writer) = stream.split();
             // First, we need to read the server's message
+            //tokio::io::read_exact(reader, buf);
             tokio::io::read_exact(stream, buf)
         })
-        .and_then(|(stream, buf)| {
+        .and_then(move|(stream, buf)| {
             // Then, we use write_all to write the entire buffer back:
             println!("read:{:?}",buf);
             tokio::spawn(tokio::io::write_all(stream, b"Welcome to the echo client\r\n")
-                .and_then(move|(writer, buf)| {
 
-                future::ok(())
+                .and_then(|(writer, _buf)| {
+                   // tokio::io::write_all(stream, b"goodbye the echo client\r\n");
+                    future::ok(())
                 //reader.
             }).map_err(|e| eprintln!("Error occured: {:?}", e)));
             futures::future::ok(())
