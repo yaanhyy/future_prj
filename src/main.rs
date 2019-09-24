@@ -35,6 +35,7 @@ mod mpsc_test;
 mod interval;
 mod chat_comb;
 mod async_io;
+mod tinyhttp;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
