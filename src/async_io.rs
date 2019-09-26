@@ -179,7 +179,6 @@ impl<W, T> Future for WriteAll<W, T>
 
 fn async_write_read() {
 
-
 }
 
 #[test]
