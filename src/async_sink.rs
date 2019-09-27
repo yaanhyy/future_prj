@@ -212,7 +212,7 @@ fn async_sink() {
     }
     let byte_sink1 = ByteSink(io::stdout());
 
-    run_sink("sink data 1",byte_sink1);
+    run_sink("sink data 1\n",byte_sink1);
 
     // We can use BytesCodec again to create a Sink which accepts Bytes buffers
     // containing bytes. To turn that into a Sink accepting individual bytes we
@@ -223,12 +223,12 @@ fn async_sink() {
             Ok::<_, io::Error>([byte][..].into())
         });
 
-    run_sink("sink data 2",byte_sink2);
+    run_sink("sink data 2\n",byte_sink2);
 
     // Now we have a sink which accepts bytes, we can stream bytes into it:
-    fn run_sink<S: Sink<SinkItem=u8,SinkError=io::Error> + Send + 'static>(out :&str, byte_sink: S) {
+    fn run_sink<S: Sink<SinkItem=u8,SinkError=io::Error> + Send + 'static>(out :&'static str, byte_sink: S) {
         tokio::run(
-            stream::iter_ok::<_, io::Error>("sending to sink\n".bytes())
+            stream::iter_ok::<_, io::Error>(out.bytes())
                 // forward our stream to the aink we have made:
                 .forward(byte_sink)
                 // map output from this Forward Future to () since we don't care:
