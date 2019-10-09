@@ -35,6 +35,7 @@ use bytes::BytesMut;
 use http::header::HeaderValue;
 use http::{Request, Response, StatusCode};
 
+#[allow(dead_code)]
 fn server() -> Result<(), Box<dyn std::error::Error>> {
     // Parse the arguments, bind the TCP socket we'll be listening to, spin up
     // our worker threads, and start shipping sockets to those worker threads.

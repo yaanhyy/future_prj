@@ -37,6 +37,7 @@ mod chat_comb;
 mod async_io;
 mod tinyhttp;
 mod async_sink;
+mod io_multi;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)

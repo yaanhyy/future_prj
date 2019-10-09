@@ -47,10 +47,10 @@ fn bg_task(rx: mpsc::Receiver<Vec<u8>>) -> impl Future<Item = (), Error = ()> {
     // Using `fold` allows the state to be maintained across iterations.
     // In this case, the state is the number of read bytes between tick.
     items
-        .fold(Vec::<u8>::new(), |num, item| {
+        .fold(Vec::<u8>::new(), |mut num, item| {
             match item {
                 // Sum the number of bytes with the state.
-                Item::Data(v) => future::ok(num.append(&mut v)),
+                Item::Data(mut v) => {num.append(&mut v); future::ok( num)},
                 Item::Tick => {
                     println!("bytes read = {:?}", num);
 
