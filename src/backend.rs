@@ -1,24 +1,23 @@
+use futures::future::lazy;
+use futures::sync::{mpsc, oneshot};
+use futures::{future, stream, Future, Sink, Stream};
+use std::thread::{sleep, spawn};
+use std::time::{Duration, Instant};
 use tokio::io;
 use tokio::net::TcpListener;
 use tokio::timer::Interval;
-use futures::{future, stream, Future, Stream, Sink};
-use futures::future::{lazy};
-use futures::sync::{mpsc, oneshot};
-use std::time::{Duration,Instant};
-use std::thread::{sleep, spawn};
 
 // 定义后台任务。`rx` 参数是通道的接收句柄。
 // 任务将从通道中拉取 `usize` 值（代表套接字读取都字节数）并求总和。
 // 所求的总和将每三十秒被打印到标准输出（stdout）然后重置为零。
-fn bg_task(rx: mpsc::Receiver<usize>)
-           -> impl Future<Item = (), Error = ()>
-{
+fn bg_task(rx: mpsc::Receiver<Vec<u8>>) -> impl Future<Item = (), Error = ()> {
     // The stream of received `usize` values will be merged with a 30
     // second interval stream. The value types of each stream must
     // match. This enum is used to track the various values.
     #[derive(Eq, PartialEq)]
     enum Item {
         Value(usize),
+        Data(Vec<u8>),
         Tick,
         Done,
     }
@@ -33,7 +32,8 @@ fn bg_task(rx: mpsc::Receiver<usize>)
     // 将流转换为这样的序列:
     // Item(num), Item(num), ... Done
     //
-    let items = rx.map(Item::Value)
+    let items = rx
+        .map(Item::Data)
         .chain(stream::once(Ok(Item::Done)))
         // Merge in the stream of intervals
         .select(interval)
@@ -46,66 +46,69 @@ fn bg_task(rx: mpsc::Receiver<usize>)
     //
     // Using `fold` allows the state to be maintained across iterations.
     // In this case, the state is the number of read bytes between tick.
-    items.fold(0, |num, item| {
-        match item {
-            // Sum the number of bytes with the state.
-            Item::Value(v) => future::ok(num + v),
-            Item::Tick => {
-                println!("bytes read = {}", num);
+    items
+        .fold(Vec::<u8>::new(), |num, item| {
+            match item {
+                // Sum the number of bytes with the state.
+                Item::Data(v) => future::ok(num.append(&mut v)),
+                Item::Tick => {
+                    println!("bytes read = {:?}", num);
 
-                // 重置字节计数器
-                future::ok(0)
+                    // 重置字节计数器
+                    future::ok(Vec::<u8>::new())
+                }
+                _ => unreachable!(),
             }
-            _ => unreachable!(),
-        }
-    })
+        })
         .map(|_| ())
 }
 
 fn backend() {
-// 启动应用
+    // 启动应用
     tokio::run(lazy(|| {
         let addr = "127.0.0.1:1234".parse().unwrap();
         let listener = TcpListener::bind(&addr).unwrap();
 
-// 创建用于与后台任务通信的通道。
-        let (tx, rx) = mpsc::channel(1_024);
+        // 创建用于与后台任务通信的通道。
+        let (tx, rx) = mpsc::channel(1024);
 
-// 创建后台任务：
+        // 创建后台任务：
         tokio::spawn(bg_task(rx));
 
-        listener.incoming().for_each(move |socket| {
-// 接收到一个入站套接字。
-//
-// 创建新任务处理套接字。
-            tokio::spawn({
-// 每个新创建的任务都会拥有发送者句柄的一份拷贝。
-                let tx = tx.clone();
+        listener
+            .incoming()
+            .for_each(move |socket| {
+                // 接收到一个入站套接字。
+                //
+                // 创建新任务处理套接字。
+                tokio::spawn({
+                    // 每个新创建的任务都会拥有发送者句柄的一份拷贝。
+                    let mut tx = tx.clone();
 
-// 在本例中，将 "hello world" 写入套接字然后关闭之。
-                io::read_to_end(socket, vec![])
-// 释放套接字
-                    .and_then(move |(_, buf)| {
-                        tx.send(buf.len())
-                            .map_err(|_| io::ErrorKind::Other.into())
-                    })
-                    .map(|_| ())
-// 打印错误信息到标准输出
-                    .map_err(|e| println!("socket error = {:?}", e))
-            });
+                    // 在本例中，将 "hello world" 写入套接字然后关闭之。
+                    io::read_to_end(socket, vec![])
+                        // 释放套接字
+                        .and_then(move |(sockert, buf)| {
+                            tx.start_send(buf).map_err(|_| io::ErrorKind::Other.into())
+                        })
+                        .map(|_| ())
+                        // 打印错误信息到标准输出
+                        .map_err(|e| println!("socket error = {:?}", e))
+                });
 
-// 接收下一个入站套接字
-            Ok(())
-        })
+                // 接收下一个入站套接字
+                Ok(())
+            })
             .map_err(|e| println!("listener error = {:?}", e))
     }));
 }
 
 type Message = oneshot::Sender<Duration>;
-use futures::Poll;
 use futures::Async;
+use futures::Poll;
 use rand;
 use rand::Rng;
+
 // My code
 struct Pong {
     start: Instant,
@@ -116,21 +119,19 @@ impl Pong {
     fn new(wait_max_secs: u64) -> Pong {
         let mut rng = rand::thread_rng();
         let wait_secs = rng.gen_range(0, wait_max_secs);
-        println!("wait_secs:{}",wait_secs);
+        println!("wait_secs:{}", wait_secs);
         let pong = Pong {
             start: Instant::now(),
-            wait_secs
+            wait_secs,
         };
 
-        let sleep_secs = rng.gen_range(wait_max_secs+1, wait_max_secs+5);
+        let sleep_secs = rng.gen_range(wait_max_secs + 1, wait_max_secs + 5);
         println!("sleep_secs:{}", sleep_secs);
-        let duration = Duration::from_millis(sleep_secs*1000);
+        let duration = Duration::from_millis(sleep_secs * 1000);
         sleep(duration);
         pong
     }
 }
-
-
 
 impl Future for Pong {
     type Item = ();
@@ -147,13 +148,10 @@ impl Future for Pong {
     }
 }
 
-
 struct Transport;
 
 impl Transport {
-    fn send_ping(&self) {
-
-    }
+    fn send_ping(&self) {}
 
     fn recv_pong(&self) -> impl Future<Item = (), Error = io::Error> {
         // ...
@@ -162,9 +160,7 @@ impl Transport {
     }
 }
 
-fn coordinator_task(rx: mpsc::Receiver<Message>)
-                    -> impl Future<Item = (), Error = ()>
-{
+fn coordinator_task(rx: mpsc::Receiver<Message>) -> impl Future<Item = (), Error = ()> {
     let transport = Transport;
 
     rx.for_each(move |pong_tx| {
@@ -172,8 +168,9 @@ fn coordinator_task(rx: mpsc::Receiver<Message>)
 
         transport.send_ping();
 
-        transport.recv_pong()
-            .map_err(|e|  println!("recv_pong err = {:?}", e))
+        transport
+            .recv_pong()
+            .map_err(|e| println!("recv_pong err = {:?}", e))
             .and_then(move |_| {
                 let rtt = start.elapsed();
                 pong_tx.send(rtt).unwrap();
@@ -183,17 +180,14 @@ fn coordinator_task(rx: mpsc::Receiver<Message>)
 }
 
 /// Request an rtt.
-fn rtt(tx: mpsc::Sender<Message>)
-       -> impl Future<Item = (Duration, mpsc::Sender<Message>), Error = ()>
-{
+fn rtt(
+    tx: mpsc::Sender<Message>,
+) -> impl Future<Item = (Duration, mpsc::Sender<Message>), Error = ()> {
     let (resp_tx, resp_rx) = oneshot::channel();
 
     tx.send(resp_tx)
         .map_err(|_| ())
-        .and_then(|tx| {
-            resp_rx.map(|dur| (dur, tx))
-                .map_err(|_| ())
-        })
+        .and_then(|tx| resp_rx.map(|dur| (dur, tx)).map_err(|_| ()))
 }
 
 fn comm() {
@@ -222,13 +216,11 @@ fn comm() {
 }
 
 #[test]
-fn backend_test(){
+fn backend_test() {
     backend();
-
 }
 
 #[test]
-fn comm_test(){
+fn comm_test() {
     comm();
-
 }

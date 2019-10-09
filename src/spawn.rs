@@ -1,7 +1,7 @@
 use futures::sync::oneshot;
 use futures::future::lazy;
 use futures::sync::mpsc;
-use futures::{stream, Future, Stream, Sink, Poll, Async};
+use futures::{stream, Future, Stream, Sink, Async};
 use futures::future;
 
 
