@@ -49,14 +49,17 @@ fn tcp_read() {
                     future::ok(())
                 //reader.
             }).map_err(|e| eprintln!("Error occured: {:?}", e)));
-            futures::future::ok(())
-        }).map_err(|err| {
+            futures::future::result(Ok(()))
+
+        })
+        .map_err(|err| {
         // All tasks must have an `Error` type of `()`. This forces error
         // handling and helps avoid silencing failures.
         //
         // In our example, we are only going to log the error to STDOUT.
-        println!("connection error = {:?}", err);
-    });
+            println!("connection error = {:?}", err);
+        })
+        ;
    /*     .inspect(|(_stream, buf)| {
             println!("echoed back {} bytes: {:x?}", buf.len(), buf);
            // future::ok(())
