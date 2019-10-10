@@ -3,7 +3,7 @@ use std::{fmt::{Debug, Display}, io, net::{Ipv4Addr, SocketAddr, SocketAddrV4}, 
 use tokio::{
     codec::{BytesCodec, Framed, Encoder, Decoder},
     net::{TcpListener, TcpStream}};
-
+use futures::{stream};
 use futures::{future::{self}, prelude::*};
 pub struct LinesCodec {
     // Stored index of the next index to examine for a `\n` character.
@@ -91,9 +91,10 @@ fn frame_process(port: u16) {
     let addr = SocketAddr::V4(SocketAddrV4::new(i, port));
 
     let future = TcpStream::connect(&addr).and_then(|sock| {
-        let framed_sock = Framed::new(sock, LinesCodec::new());
-        framed_sock.for_each(|line| {
+        let (mut framed_sink, stream )= Framed::new(sock, LinesCodec::new()).split();
+        stream.for_each(move |line| {
             println!("Received line {}", line);
+            framed_sink.start_send(line) ;
             Ok(())
         })
     });
