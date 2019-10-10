@@ -54,11 +54,11 @@ fn io_test() {
                         })
                             .map_err(|e| println!("C: receive error: {}", e))
                     });
-                future::ok(())
+                Either::A(future)
             },
-            Ok(None) => future::ok(()),
+            Ok(None) => Either::B(future::ok(())),
 
-            Err(e) => future::ok(())
+            Err(e) => Either::B(future::ok(()))
         }
     });
 
@@ -71,12 +71,12 @@ fn io_test() {
                 .map(|frame_in| frame_in.into())
                 .forward(stream_out)
                 .from_err()
-                .map(|_| ());
-            future::ok(())
-        }).map_err(|e| println!("S: connection error: {}", e));
+                .map(|_| ())
+            //future::ok(())
+        }).map_err(|e| println!("S: connection error: {}", e))
     });
 
     let mut rt = Runtime::new().unwrap();
-    rt.spawn(server);
-    stream.wait().unwrap();
+    rt.spawn(stream);
+    server.wait().unwrap();
 }
