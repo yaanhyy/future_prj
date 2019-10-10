@@ -67,7 +67,8 @@ fn process(socket: TcpStream) {
         .split();
 
     // Map all requests into responses and send them back to the client.
-    let task = tx.send_all(rx.and_then(respond)).then(|res| {
+    let rx_out = rx.and_then(respond);
+    let task = tx.send_all(rx_out).then(|res| {
         if let Err(e) = res {
             println!("failed to process connection; error = {:?}", e);
         }
