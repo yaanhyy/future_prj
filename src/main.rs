@@ -39,6 +39,7 @@ mod tinyhttp;
 mod async_sink;
 mod io_multi;
 mod connect;
+mod framed_stream;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
