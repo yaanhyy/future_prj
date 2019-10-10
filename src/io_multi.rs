@@ -34,12 +34,12 @@ fn io_test() {
     let cfg = Config::default();
     let d = BytesCodec::new();
     let l = server();
-    let server = l.incoming()
+    let serv = l.incoming()
         .map(move |sock| Connection::new(sock, cfg.clone(), Mode::Server))
         .into_future()
         .map_err(|(e, _rem)| println!("accept failed: {}", e))
         .and_then(|(maybe, _rem)| {println!("server_map");maybe.ok_or(())});
-    let server = server.and_then(move |c| {
+    let server = serv.and_then(move |c| {
         match c.open_stream() {
             Ok(Some(stream)) => {
                 println!("C: new stream: {:?}", stream);
@@ -79,4 +79,5 @@ fn io_test() {
     let mut rt = Runtime::new().unwrap();
     rt.spawn(stream);
     server.wait().unwrap();
+    //server1.wait().unwrap();
 }

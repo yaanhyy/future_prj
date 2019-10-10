@@ -198,12 +198,14 @@ fn async_sink() {
         type SinkItem = u8;
         type SinkError = io::Error;
         fn start_send(&mut self, item: u8) -> Result<AsyncSink<u8>, io::Error> {
+            println!("start_send");
             match self.0.poll_write(&[item])? {
                 Async::NotReady => Ok(AsyncSink::NotReady(item)),
                 Async::Ready(_) => Ok(AsyncSink::Ready)
             }
         }
         fn poll_complete(&mut self) -> Result<Async<()>,io::Error> {
+            println!("poll_complete");
             match self.0.poll_flush()? {
                 Async::Ready(_) => Ok(Async::Ready(())),
                 Async::NotReady => Ok(Async::NotReady)

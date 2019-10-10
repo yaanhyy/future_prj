@@ -1,6 +1,7 @@
 use std::io;
 use tokio::prelude::*;
-
+use tokio::io as nio;
+use tokio::runtime::Runtime;
 // This is going to be our Future.
 // In the common case, this is set to Some(Reading),
 // but we'll set it to None when we return Async::Ready
@@ -178,7 +179,27 @@ impl<W, T> Future for WriteAll<W, T>
 }
 
 fn async_write_read() {
+    let mut buf:[u8;4] = [1,2,4,5];
+    let read = read_exact(nio::stdin(), buf);
 
+    {
+        let mut rt = Runtime::new().unwrap();
+       // let res = read.wait();
+        match rt.block_on(read) {
+            Ok(t) => {
+                let (out_io, out) = t;
+
+                println!("out:{:?}", out);
+                if !out.is_empty() {
+                    println!("empty");
+                    //break;
+                }
+            }
+            Err(e) =>   println!("{:?}", e)
+        }
+    }
+
+    //tokio::run(read);
 }
 
 #[test]
