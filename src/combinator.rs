@@ -1,6 +1,8 @@
 use futures::Stream;
 use std::time::Duration;
 use tokio::timer::Interval;
+use tokio::prelude::*;
+use futures_util::future::FutureExt;
 
 struct Fibonacci {
     curr: u64,
@@ -27,8 +29,21 @@ fn fibonacci() {
     }));
 }
 
+
+
+fn stream_to_future() {
+    let a = Ok::<_,()>(1). into_future();
+    let res = a.and_then(|a|{Ok(a+3)}).wait().unwrap();
+    println!("res:{}", res);
+}
+
 #[test]
 fn fibonacci_test() {
     fibonacci();
+}
+
+#[test]
+fn stream_to_future_test() {
+    stream_to_future();
 }
 
