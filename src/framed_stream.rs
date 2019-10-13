@@ -104,7 +104,7 @@ fn frame_process(port: u16) {
     //tokio::run(future);
 }
 
-fn frame_echo(port: u16) {
+fn frame_echo_fut(port: u16) {
     let i = Ipv4Addr::new(127, 0, 0, 1);
     let addr = SocketAddr::V4(SocketAddrV4::new(i, port));
 
@@ -123,12 +123,28 @@ fn frame_echo(port: u16) {
                 },
                 Err((t, frame)) => {},
                 Ok(Async::NotReady)=> {
-                    println!("not ready");
+                    //println!("not ready");
                 }
             };
         }
         Ok(())
     }) .map_err(|e| eprintln!("Error reading directory: {}", e));
+    //future.wait();
+    tokio::run(future);
+}
+
+fn frame_echo(port: u16) {
+    let i = Ipv4Addr::new(127, 0, 0, 1);
+    let addr = SocketAddr::V4(SocketAddrV4::new(i, port));
+
+    let future = TcpStream::connect(&addr).and_then(|sock| {
+        let framed_stream = Framed::new(sock, LinesCodec::new());
+        let res = framed_stream.send("123".to_string());
+        res
+
+
+    }) .map_err(|e| eprintln!("Error reading directory: {}", e))
+        .and_then(|x| future::ok(()));
     //future.wait();
     tokio::run(future);
 }
