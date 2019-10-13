@@ -5,6 +5,11 @@ use tokio::{
     net::{TcpListener, TcpStream}};
 use futures::{stream};
 use futures::{future::{self}, prelude::*};
+use futures_util::sink::SinkExt;
+use futures_util::stream::StreamExt;
+use futures::sync::mpsc;
+use std::sync::Arc;
+
 pub struct LinesCodec {
     // Stored index of the next index to examine for a `\n` character.
     // This is used to optimize searching.
@@ -93,16 +98,44 @@ fn frame_process(port: u16) {
 
     let future = TcpStream::connect(&addr).and_then(|sock| {
         let (mut framed_sink, framed_stream )= Framed::new(sock, LinesCodec::new()).split();
-        //tokio::spawn(poll_fn(move||{ framed_sink.start_send(); Ok(())}));
+
         framed_stream.for_each(move |line| {
             println!("Received line {}", line);
-           // framed_sink.start_send(line) ;
-            Ok(())
+            //framed_sink.send(line) ;
+           Ok(())
         })
     });
     future.wait();
     //tokio::run(future);
 }
+
+fn frame_process_new(port: u16) {
+    let i = Ipv4Addr::new(127, 0, 0, 1);
+    let addr = SocketAddr::V4(SocketAddrV4::new(i, port));
+
+    let future = TcpStream::connect(&addr).and_then(|sock| {
+        let (mut framed_sink, framed_stream )= Framed::new(sock, LinesCodec::new()).split();
+   //     let a = Arc::new(mpsc::unbounded());
+
+//        tokio::spawn(
+//            rx.collect()(
+//                move |x| {
+//                        framed_sink.start_send(x)
+//
+//                }
+//            )
+//        );
+        framed_stream.for_each( |line| {
+            println!("Received line {}", line);
+            //framed_sink.send(line) ;
+  //diff          a.0.send(line );
+             future::ok(())
+        })
+    }).map_err(|e| eprintln!("Error reading directory: {}", e));
+    //future.wait();
+    tokio::run(future);
+}
+
 
 fn frame_echo_fut(port: u16) {
     let i = Ipv4Addr::new(127, 0, 0, 1);
@@ -143,16 +176,20 @@ fn frame_echo(port: u16) {
         res
 
 
-    }) .map_err(|e| eprintln!("Error reading directory: {}", e))
-        .and_then(|x| future::ok(()));
-    //future.wait();
+    })// .map_err(|e| eprintln!("Error reading directory: {}", e))
+        .and_then(|x| {x.for_each(move |line| {
+            println!("Received line {}", line);
+            // framed_sink.start_send(line) ;
+            future::ok(())
+        })} ).map_err(|e| eprintln!("Error reading directory: {}", e));//.map(|x| future::ok(()));
+   // future.wait();
     tokio::run(future);
 }
 
 
 #[test]
 fn frame_process_test() {
-    frame_process(7865);
+    frame_process_new(7865);
 }
 
 #[test]
