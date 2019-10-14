@@ -26,3 +26,4 @@ serde_derive = "1.0"
 serde_json = "1.0"
 time = "0.1"
 yamux = "0.2.1"
+mio = {rev="9fe594eae1b92ad1d045c1456cc3d608b0ca7689",git = "https://github.com/tokio-rs/mio.git"}

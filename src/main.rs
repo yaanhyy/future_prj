@@ -40,6 +40,7 @@ mod async_sink;
 mod io_multi;
 mod connect;
 mod framed_stream;
+mod mio_tcp;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
