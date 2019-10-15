@@ -41,6 +41,7 @@ mod io_multi;
 mod connect;
 mod framed_stream;
 mod mio_tcp;
+mod barrier_thread;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
