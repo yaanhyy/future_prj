@@ -9,6 +9,7 @@ use futures_util::sink::SinkExt;
 use futures_util::stream::StreamExt;
 use futures::sync::mpsc;
 use std::sync::Arc;
+use tokio::io::{copy, write_all};
 
 pub struct LinesCodec {
     // Stored index of the next index to examine for a `\n` character.
@@ -177,11 +178,15 @@ fn frame_echo(port: u16) {
 
 
     })// .map_err(|e| eprintln!("Error reading directory: {}", e))
-        .and_then(|x| {x.for_each(move |line| {
-            println!("Received line {}", line);
-            // framed_sink.start_send(line) ;
-            future::ok(())
-        })} ).map_err(|e| eprintln!("Error reading directory: {}", e));//.map(|x| future::ok(()));
+        .and_then(|x| {
+            let (sink, stream) = x.split();
+
+            //loop {
+                tokio::spawn(stream.map(|x| {format!("echo:{}", x)} ).forward(sink).map(|x| ()).map_err(|e| ()) );
+              //  println!("Received line {}", line);
+                future::ok(())
+          //  }
+        }).map_err(|e| eprintln!("Error reading directory: {}", e));//.map(|x| future::ok(()));
    // future.wait();
     tokio::run(future);
 }
