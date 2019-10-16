@@ -82,6 +82,31 @@ fn io_test() {
     //server1.wait().unwrap();
 }
 
+#[test]
+fn io_test_1() {
+    let cfg = Config::default();
+    let d = BytesCodec::new();
+    let l = server();
+    let serv = l.incoming()
+        .map(move |sock| Connection::new(sock, cfg.clone(), Mode::Server))
+        .into_future()
+        .map_err(|(e, _rem)| println!("accept failed: {}", e))
+        .and_then(|(maybe, _rem)| {println!("server_map");maybe.ok_or(())});
+    let server = serv.and_then( move|x| {
+        x.for_each(move |stream| {
+            let (stream_out, stream_in) = Framed::new(stream, d).split();
+            stream_in
+                .take(1)
+                .map(|frame_in| frame_in.into())
+                .forward(stream_out)
+                .from_err()
+                .map(|_| ())
+            //future::ok(())
+        }).map_err(|e| println!("S: connection error: {}", e))
+    });
+    server.wait().unwrap();
+}
+
 //#[test]
 //fn io_test() {
 //    let cfg = Config::default();
