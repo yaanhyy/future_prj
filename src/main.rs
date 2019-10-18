@@ -43,6 +43,7 @@ mod framed_stream;
 mod mio_tcp;
 mod barrier_thread;
 mod manul_runtime;
+mod thread_local;
 
 fn my_fn() -> Result<u32, Box<Error>> {
     Ok(100)
