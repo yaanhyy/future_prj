@@ -1,27 +1,36 @@
 use std::cell::RefCell;
 use std::thread;
+use core::borrow::BorrowMut;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+static NEXT_TASK_ID: AtomicUsize = AtomicUsize::new(1);
 thread_local! {
-    static FOO: RefCell<u32> = RefCell::new(1);
+    static FOO: usize = NEXT_TASK_ID.fetch_add(1, Ordering::Relaxed);
 }
 
 fn local_process() {
-    FOO.with(|foo| {
-        assert_eq!(*foo.borrow(), 1);
-        *foo.borrow_mut() = 2;
+    FOO.with(|mut foo| {
+        assert_eq!(*foo, 1);
     });
 
     // each thread starts out with the initial value of 1
     thread::spawn(move|| {
-        FOO.with(|foo| {
-            println!("spawn dagta:{}",*foo.borrow());
-            *foo.borrow_mut() = 3;
+        FOO.with(|& foo| {
+            println!("spawn dagta:{}", foo);
+
         });
     });
 
+    // each thread starts out with the initial value of 1
+    thread::spawn(move|| {
+        FOO.with(|& foo| {
+            println!("spawn dagta:{}", foo);
+
+        });
+    });
     // we retain our original value of 2 despite the child thread
-    FOO.with(|foo| {
-        assert_eq!(*foo.borrow(), 2);
+    FOO.with(|mut foo| {
+        assert_eq!(*foo, 1);
     });
 }
 
