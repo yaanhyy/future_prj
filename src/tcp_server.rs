@@ -23,7 +23,9 @@ fn tcp_server() {
         .for_each(|socket| {
             let (reader, writer) = socket.split();
             write_all(writer, b"Welcome to the echo server\r\n")
-                .and_then(|(writer, _)| {
+                .and_then(|(writer, buf)| {
+                    let out = std::str::from_utf8(buf);
+                    println!("send data:{:?}", out);
                     copy(reader, writer)
                         .map(|_| println!("Connection closed"))
                 })
@@ -95,7 +97,8 @@ impl Manager {
             .for_each(|socket| {
                 let (reader, writer) = socket.split();
                 write_all(writer, b"Welcome to the echo server\r\n")
-                    .and_then(|(writer, _)| {
+                    .and_then(|(writer, buf)| {
+                        println!("send data:{:?}", buf);
                         copy(reader, writer)
                             .map(|_| println!("Connection closed"))
                     })
