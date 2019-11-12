@@ -37,6 +37,27 @@ fn stream_to_future() {
     println!("res:{}", res);
 }
 
+fn fold_future() {
+
+    let number_stream = stream::iter_ok::<_, ()>(0..6);
+    let sum = number_stream.fold(0, |acc, x| future::ok(acc + x));
+    println!("sun:{:?}", sum.wait());
+
+    let mut stream = stream::unfold(0, |state| {
+        if state <= 2 {
+            let next_state = state + 1;
+            let yielded = state  * 2;
+            let fut = future::ok::<_, u32>((yielded, next_state));
+            Some(fut)
+        } else {
+            None
+        }
+    });
+    let res = stream.collect().wait();
+    println!("res:{:?}", res);
+    //tokio::run(stream);
+}
+
 #[test]
 fn fibonacci_test() {
     fibonacci();
@@ -47,3 +68,7 @@ fn stream_to_future_test() {
     stream_to_future();
 }
 
+#[test]
+fn fofold_future_test() {
+    fold_future();
+}
