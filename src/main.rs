@@ -2,7 +2,7 @@
 
 //extern crate futures_await as futures;
 //extern crate tokio_core;
-#![feature(async_await)]
+
 #[macro_use]
 extern crate futures;
 use futures::done;

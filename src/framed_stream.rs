@@ -79,12 +79,12 @@ impl Encoder for LinesCodec {
         // It's important to reserve the amount of space needed. The `bytes` API
         // does not grow the buffers implicitly.
         // Reserve the length of the string + 1 for the '\n'.
-        buf.reserve(line.len() + 1);
+        buf.reserve(line.len() + 2);
 
         // String implements IntoBuf, a trait used by the `bytes` API to work with
         // types that can be expressed as a sequence of bytes.
         buf.put(line);
-
+        buf.put_u8(b'h');
         // Put the '\n' in the buffer.
         buf.put_u8(b'\n');
 
